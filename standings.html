@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <style>
+    .axis path {
+      fill: none;
+      stroke: #222;
+      shape-rendering: crispEdges;
+    }
+
+    .axis text {
+      font-family: Lato;
+      font-size: 13px;
+    }
+
+    path[id^='line_'] {
+      opacity: 0.1;
+    }
+
+    path[id^='line_'].active {
+      opacity: 1;
+    }
+
+    body {
+      margin: 0;
+      /* background: black; */
+    }
+
+    text {
+      fill: #555;
+    }
+
+    .container {
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+
+    }
+
+    #teams {
+      width: 170px;
+      height: 100%;
+      overflow-y: auto;
+      background: black;
+      ;
+    }
+
+    #teams button {
+      display: block;
+      width: 100%;
+      font-size: 11px; 
+      margin: 0;
+      padding: 0;
+      background: none;
+      border: none;
+      color: white;
+      opacity: .3;
+    }
+
+    #teams button.active {
+      opacity: 1;
+    }
+
+    #visualisation {
+      height: 500px;
+      flex-grow: 1;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="container">
+    <div id="teams">
+
+    </div>
+    <svg id="visualisation"></svg>
+  </div>
+
+  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script>
+    const COLORS = {
+      'Washington Capitols': 'black',
+      'Philadelphia Warriors': 'black',
+      'New York Knicks': 'blue',
+      'Providence Steamrollers': 'black',
+      'Boston Celtics': 'green',
+      'Toronto Huskies': 'black',
+      'Chicago Stags': 'black',
+      'St. Louis Bombers': 'black',
+      'Cleveland Rebels': 'black',
+      'Detroit Falcons': 'black',
+      'Pittsburgh Ironmen': 'black',
+      'Baltimore Bullets': 'black',
+      'Rochester Royals': 'black',
+      'Minneapolis Lakers': 'black',
+      'Fort Wayne Pistons': 'black',
+      'Indianapolis Jets': 'black',
+      'Syracuse Nationals': 'black',
+      'Indianapolis Olympians': 'black',
+      'Anderson Packers': 'black',
+      'Tri-Cities Blackhawks': 'black',
+      'Sheboygan Red Skins': 'black',
+      'Waterloo Hawks': 'black',
+      'Denver Nuggets': 'yellow',
+      'Milwaukee Hawks': 'black',
+      'Angeles': 'black',
+      'St. Louis Hawks': 'black',
+      'Detroit Pistons': 'blue',
+      'Cincinnati Royals': 'black',
+      'Los Angeles Lakers': 'purple',
+      'Chicago Packers': 'black',
+      'San Francisco Warriors': 'black',
+      'Chicago Zephyrs': 'black',
+      'Philadelphia 76ers': 'blue',
+      'Chicago Bulls': 'red',
+      'Seattle SuperSonics': 'green',
+      'San Diego Rockets': 'black',
+      'Milwaukee Bucks': 'green',
+      'Atlanta Hawks': 'red',
+      'Phoenix Suns': 'purple',
+      'Buffalo Braves': 'black',
+      'Cleveland Cavaliers': 'blue',
+      'Portland Trail Blazers': 'black',
+      'Golden State Warriors': 'yellow',
+      'Houston Rockets': 'red',
+      'Kansas City-Omaha Kings': 'black',
+      'Capital Bullets': 'black',
+      'Washington Bullets': 'blue',
+      'New Orleans Jazz': 'black',
+      'Kansas City Kings': 'black',
+      'San Antonio Spurs': 'black',
+      'New York Nets': 'black',
+      'Indiana Pacers': 'yellow',
+      'New Jersey Nets': 'blue',
+      'San Diego Clippers': 'black',
+      'Utah Jazz': 'purple',
+      'Dallas Mavericks': 'blue',
+      'Los Angeles Clippers': 'red',
+      'Sacramento Kings': 'purple',
+      'Charlotte Hornets': 'blue',
+      'Miami Heat': 'black',
+      'Orlando Magic': 'blue',
+      'Minnesota Timberwolves': 'black',
+      'Toronto Raptors': 'purple',
+      'Vancouver Grizzlies': 'black',
+      'Washington Wizards': 'black',
+      'Memphis Grizzlies': 'black',
+      'New Orleans Hornets': 'black',
+      'Charlotte Bobcats': 'black',
+      'New Orleans/Oklahoma City Hornets': 'black',
+      'Oklahoma City Thunder': 'black',
+      'Brooklyn Nets': 'black',
+      "New Orleans Pelicans": 'black',
+    }
+
+    const toggleTeam = (event) => {
+      const btn = event.currentTarget
+      const line = document.getElementById('line_' + event.currentTarget.id)
+      if (event.target.classList.contains('active')) {
+        btn.classList.remove('active')
+        line.classList.remove('active')
+      } else {
+        btn.classList.add('active')
+        line.classList.add('active')
+      }
+    }
+
+    const toggleTeamById = (id) => {
+      const btn = document.getElementById(id)
+      const line = document.getElementById('line_' + id)
+      if (event.target.classList.contains('active')) {
+        btn.classList.remove('active')
+        line.classList.remove('active')
+      } else {
+        btn.classList.add('active')
+        line.classList.add('active')
+      }
+    }
+
+    const makeMenu = (teams) => {
+      const sorted = teams.sort()
+      for (const team of sorted) {
+        const btn = document.createElement('button')
+        btn.innerText = team;
+        btn.id = team.split(' ').join('-');
+        btn.addEventListener('click', toggleTeam)
+        document.getElementById('teams').appendChild(btn)
+
+      }
+    }
+
+    const getJSON = async () => {
+      const resp = await fetch('STANDINGS.json')
+      const json = await resp.json()
+      return json
+    }
+
+    const getDatasets = (obj) => {
+      const datasets = []
+      const teams = Object.keys(obj)
+
+      makeMenu(teams)
+
+      for (const team of teams) {
+        datasets.push({
+          team,
+          values: obj[team]
+        })
+      }
+
+      return datasets;
+    }
+
+    const init = async () => {
+      const obj = await getJSON();
+      const datasets = getDatasets(obj)
+
+      var vis = d3.select("#visualisation"),
+        WIDTH = 1000,
+        HEIGHT = 500,
+        MARGINS = {
+          top: 20,
+          right: 20,
+          bottom: 20,
+          left: 50
+        },
+
+        xScale = d3.scale.linear().range([MARGINS.left, WIDTH - MARGINS.right]).domain([1946, 2019]),
+        yScale = d3.scale.linear().range([HEIGHT - MARGINS.top, MARGINS.bottom]).domain([0, 100]),
+        xAxis = d3.svg.axis().scale(xScale),
+        yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+
+      vis.append("svg:g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + (HEIGHT - MARGINS.bottom) + ")")
+        .call(xAxis);
+
+      vis.append("svg:g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + (MARGINS.left) + ",0)")
+        .call(yAxis);
+
+      var lineGen = d3.svg.line()
+        .x(function (d) {
+          return xScale(d.year);
+        })
+        .y(function (d) {
+          return yScale(d.wins);
+        })
+        .interpolate("basis");
+
+
+
+      let index = 0;
+      for (const dataset of datasets) {
+        dataset.active = false;
+        vis.append('svg:path')
+          .attr('d', lineGen(dataset.values))
+          .attr('stroke', COLORS[dataset.team])
+          .attr('stroke-width', 5)
+          .attr('id', 'line_' + dataset.team.split(' ').join('-'))
+          .attr('fill', 'none')
+          .on('mouseover', () => {
+            toggleTeamById(dataset.team.split(' ').join('-'))
+          })
+          .on('mouseleave', () => {
+            toggleTeamById(dataset.team.split(' ').join('-'))
+          })
+        index++;
+      }
+    }
+    init()
+  </script>
+
+</body>
+
+</html>
