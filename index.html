@@ -34,14 +34,14 @@
 
     .container {
       height: 100vh;
-      width: 100vw;
       display: flex;
 
     }
 
     #teams {
-      width: 170px;
-      height: 100%;
+      width: 200px;
+      height: 100vh;
+      position: fixed;
       overflow-y: auto;
       background: black;
       ;
@@ -52,20 +52,48 @@
       width: 100%;
       font-size: 11px; 
       margin: 0;
-      padding: 0;
+      padding: 4px 8px;
       background: none;
       border: none;
       color: white;
       opacity: .3;
+      text-align: left;
     }
 
     #teams button.active {
       opacity: 1;
     }
 
+    .page {
+      flex-grow: 1;
+      padding-left: 220px;
+    }
+
     #visualisation {
       height: 500px;
+      width: 100%;
+    }
+
+    .deltas {
+      margin: 3rem 2rem 0;
+      display: flex;
+    }
+
+    .delta {
       flex-grow: 1;
+      margin: 0 1rem;
+    }
+
+    .delta table {
+      width: 100%;
+    }
+
+    .deltas th, .deltas td {
+      padding: .5rem;
+    }
+
+    .deltas tr:nth-child(2n) {
+      background-color: #f3f3f3;
     }
   </style>
 
@@ -74,10 +102,47 @@
 <body>
 
   <div class="container">
-    <div id="teams">
-
+    <div id="teams"></div>
+    <div class="page">
+      <svg id="visualisation"></svg>
+      <div class="deltas">
+        <div class="delta">
+          <h2>Best progressions</h2>
+          <table id="top">
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th>Year</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+  
+            </tbody>
+          </table>
+        </div>
+        <div class="delta">
+          <h2>Worst progressions</h2>
+          <table id="worst">
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th>Year</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+  
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
     </div>
-    <svg id="visualisation"></svg>
   </div>
 
   <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -193,8 +258,8 @@
       }
     }
 
-    const getJSON = async () => {
-      const resp = await fetch('STANDINGS.json')
+    const getJSON = async (file) => {
+      const resp = await fetch(`${file}.json`)
       const json = await resp.json()
       return json
     }
@@ -215,8 +280,39 @@
       return datasets;
     }
 
+    const makeDeltaTable = async () => {
+      const deltas = await getJSON('DELTA');
+      const top = deltas.slice(0, 10)
+      const worst = deltas.reverse().slice(0, 10)
+      for (const delta of top) {
+        const tbody = document.querySelector('.deltas #top')
+        const tr = document.createElement('tr')
+        tr.innerHTML = `
+          <td>${delta.team}</td>
+          <td>${delta.year}</td>
+          <td>${delta.previous} wins</td>
+          <td>${delta.wins} wins</td>
+          <td><strong>+ ${delta.delta}</strong></td>
+        `;
+        tbody.appendChild(tr)
+      }
+
+      for (const delta of worst) {
+        const tbody = document.querySelector('.deltas #worst')
+        const tr = document.createElement('tr')
+        tr.innerHTML = `
+          <td>${delta.team}</td>
+          <td>${delta.year}</td>
+          <td>${delta.previous} wins</td>
+          <td>${delta.wins} wins</td>
+          <td><strong> ${delta.delta}</strong></td>
+        `;
+        tbody.appendChild(tr)
+      }
+    }
+
     const init = async () => {
-      const obj = await getJSON();
+      const obj = await getJSON('STANDINGS');
       const datasets = getDatasets(obj)
 
       var vis = d3.select("#visualisation"),
@@ -273,6 +369,9 @@
           })
         index++;
       }
+
+      // DELTA TABLE
+      makeDeltaTable()
     }
     init()
   </script>

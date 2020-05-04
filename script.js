@@ -7,6 +7,7 @@ const yearNb = new Date().getFullYear() - start - 1;
 // const yearNb = 10;
 
 const DATA = {}
+const DELTA = []
 
 const init = async () => {
   const array = Array.from({ length: yearNb }, (v, k) => k + start)
@@ -16,6 +17,11 @@ const init = async () => {
   }
 
   fs.writeFileSync('STANDINGS.json', JSON.stringify(DATA, null, 2))
+
+  const sortedDelta = DELTA.sort((a,b) => {
+    return b.delta > a.delta ? 1 : -1;
+  })
+  fs.writeFileSync('DELTA.json', JSON.stringify(sortedDelta, null, 2))
 }
 
 const fetchData = async (year) => {
@@ -26,10 +32,10 @@ const fetchData = async (year) => {
   return cheerio.load(result.data);
 };
 
+const PREV_VALUES = {}
+
 const getYearStandings = async (year) => {
   const $ = await fetchData(year);
-
-
 
   const CONTEXTS = [
     $('.wikitable[width="400px"] tbody tr'),
@@ -42,6 +48,7 @@ const getYearStandings = async (year) => {
     ctx.each((_, element) => {
       let name;
       let wins;
+      let delta;
 
       const DONE = []
       const team = $(element).find('td a').attr('href')
@@ -63,10 +70,26 @@ const getYearStandings = async (year) => {
           DATA[name] = []
         }
 
+        if (PREV_VALUES[name]) {
+          delta = wins - PREV_VALUES[name]
+
+          DELTA.push({
+            team: name,
+            wins,
+            previous: PREV_VALUES[name],
+            delta,
+            year,
+          })
+        }
+
         DATA[name].push({
           year,
-          wins
+          wins,
+          delta
         })
+
+
+        PREV_VALUES[name] = wins;
         DONE.push(name)
       }
     });
